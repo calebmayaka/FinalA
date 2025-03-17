@@ -53,11 +53,41 @@ class CustomUser(AbstractBaseUser):
     # perm if the type of permission being checked and obj is the object the permission is being checked on
     def has_perm(self,perm,obj=None):
         return True
-    
+    # this permission method is used to check if the user has app level permissions
+    # since it it true the user has all permissions
     def has_module_perms(self,app_label):
         return True
     
-    
+
+class AppplicantProfile(models.Model):
+    GENDER_CHOICES = [
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+    ]
+
+    user = models.OneToOneField(CustomUser, null=True, on_delete=models.CASCADE)
+    image = models.ImageField(null=True, blank=True)
+    bio = RichTextField(null = True, blank=True)
+    address = models.TextField(max_length=255, null=True, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    Phone = models.CharField(max_length=14, null=True, blank=True)
+    gender = models.CharField(max_length=255,choices=GENDER_CHOICES, null=True, blank=True)
+    website = models.CharField(max_length=255, null=True,blank=True)
+    resume = models.FileField(null=True, blank=True)
+    totalViewCount = models.IntegerField(default=0, null=True, blank=True)
+
+class CompanyProfile(models.Model):
+    user = models.OneToOneField(CustomUser, null=True, on_delete=models.CASCADE)
+    image = models.ImageField(null=True, blank=True)
+    about = RichTextField(null=True, blank=True)
+    location = models.CharField(max_length=100, null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    website = models.CharField(max_length=255, null=True, blank=True)
+    phone = models.CharField(max_length=255, null=True, blank=True)
+    logo = models.ImageField(null=True, blank=True)
+    totalViewCount = models.IntegerField(null=True, blank=True) 
+
+
     
 
 
