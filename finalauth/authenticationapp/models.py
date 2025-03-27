@@ -89,7 +89,7 @@ class applicantprofile(models.Model):
     
     user = models.OneToOneField(CustomModel,null=True, on_delete=models.CASCADE)
     name = models.TextField(null=True, blank=True)
-    profile_picture = models.ImageField(null=True, blank=True, type = image_types)
+    profile_picture = models.ImageField(null=True, blank=True)
     description = models.TextField(null=True, blank=True, max_length=255)
     content = RichTextField(null=True, max_length = 255, blank=True)
     
@@ -107,5 +107,3 @@ class companyprofile(models.Model):
     profile_picture = models.ImageField(null=True, blank=True)
     description = models.TextField(null=True, blank=True, max_length=255)
     content = RichTextField(null=True, max_length = 255, blank=True)
-    
-    
