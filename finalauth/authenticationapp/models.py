@@ -1,109 +1,99 @@
-#  main app models
-#  imports
 from django.db import models
-from ckeditor.fields import RichTextField
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import MaxValueValidator, MinValueValidator
+from ckeditor.fields import RichTextField
 
-# creating a custom User Manager
+# User Type Choices
+USER_TYPES = [
+    ('applicant', 'Applicant'),
+    ('company', 'Company'),
+]
 
+# Creating custom user manager
 class CustomManager(BaseUserManager):
-    # method for normal user
-    def create_user(self,name,email,password=None):
-        # validation checks for only required fields
+    def create_user(self, name, email, password=None):
         if not email:
-            raise ValueError('Email is Required')
+            raise ValueError("User must have an email")
         if not name:
-            raise ValueError('name is Required')
-        #creating the user, also using the two fields, email and password
-        #  i have normalized the email to convert it to lowercase
+            raise ValueError("User must have a name")
+        
         user = self.model(
-            email = self.normalize_email(email),
-            name = name,
+            email=self.normalize_email(email),
+            name=name,
         )
-        # setting the password
+
         user.set_password(password)
-        # saving the user to the database
         user.save(using=self._db)
-
-        # returning the user
         return user
     
-    # method for creating a superuser
-    def create_super_user(self,name,email,password):
+    def create_superuser(self, name, email, password):
         user = self.create_user(
-            email = self.normalize_email(email),
             name = name,
+            email = self.normalize_email(email),
             password = password,
-        )
-        # setting the user as staff and admin
-        user.is_staff = True
+            )
+        
         user.is_admin = True
-
-        # saving and returning the user
-        # no need to use the set_password because the password is already set
+        user.is_staff = True
         user.save(using=self._db)
         return user
-    
-# creating the custom user model
 
-class CustomModel(AbstractBaseUser):
-    # creating the fields for the custom user model
-    # usinh unique = True to make sure that the email is unique, hence the primary key
-    email = models.EmailField(max_length=255, unique=True)
+# Creating custom user model
+class CustomUserModel(AbstractBaseUser):
+    email = models.EmailField(max_length=255, unique=True) 
     name = models.CharField(max_length=255)
+    user_type = models.CharField(max_length=10, choices=USER_TYPES, blank=True, null=True)  
     date_joined = models.DateTimeField(auto_now_add=True)
-    # adding the fields for the user type   
-    is_applicant = models.BooleanField(default=False)
-    is_company = models.BooleanField(default=False)
-    # adding the fields for the user permissions, cheching whether a user is active, staff or an admin
+    last_login = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
 
-    # setting the email as the username field
     USERNAME_FIELD = 'email'
-    # list if required fields
     REQUIRED_FIELDS = ['name']
 
-    # creating the user manager
     objects = CustomManager()
 
-    # dunder methods
-    
-    # return the email when an instance of the class is called 
     def __str__(self):
         return self.email
 
-    # check whether a user has specific permissions
-    # has three parameters, self, perm - type of permission, obj=None.
-    def has_perm(self,perm, obj=None):
-        return True
+    def has_perm(self, perm, obj=None):
+        return self.is_admin  # Only allow admin users full permissions
     
-    # check whether users have soecific app permissions
-    def has_module_perms(self,app_label):
-        return True
+    def has_module_perms(self, app_label):
+        return self.is_admin
 
-class applicantprofile(models.Model):
-    image_types = ['.jpg', '.png', '.jpeg' ,'.jiff']
-    
-    user = models.OneToOneField(CustomModel,null=True, on_delete=models.CASCADE)
-    name = models.TextField(null=True, blank=True)
-    profile_picture = models.ImageField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True, max_length=255)
-    content = RichTextField(null=True, max_length = 255, blank=True)
-    
-    # social media links
-    linkedin = models.TextField(max_length=255, null=True, blank=True)
-    twitter  = models.TextField(max_length=255, null=True, blank=True)
-    facebook =  models.TextField(max_length=255, null=True, blank=True)
-    reddit = models.TextField(max_length=255, null=True, blank=True)
+# Applicant Profile
+class ApplicantProfile(models.Model):
+    user = models.OneToOneField(CustomUserModel, on_delete=models.CASCADE, related_name='applicant_profile')
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    bio = RichTextField(blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    experience = models.TextField(blank=True, null=True)
+    education = models.TextField(blank=True, null=True)
+    skills = models.TextField(blank=True, null=True)
 
-class companyprofile(models.Model):
-    # this means that a user can only have one profile and a profile can only belong to one user
-    # enforcing the one to one relationship
-    user = models.OneToOneField(CustomModel, null=True, on_delete=models.CASCADE)
-    name = models.TextField(null=True, blank=True)
-    profile_picture = models.ImageField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True, max_length=255)
-    content = RichTextField(null=True, max_length = 255, blank=True)
+# Company Profile
+class CompanyProfile(models.Model):
+    user = models.OneToOneField(CustomUserModel, on_delete=models.CASCADE, related_name='company_profile')
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    bio = RichTextField(blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    company_description = models.TextField(blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+
+# Job Model
+class Job(models.Model):
+    title = models.CharField(max_length=255)
+    description = RichTextField()
+    company = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE, related_name='jobs')
+    location = models.CharField(max_length=255, blank=True, null=True)
+    salary = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    date_posted = models.DateTimeField(auto_now_add=True)
+    date_expired = models.DateTimeField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
